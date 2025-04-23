@@ -1,0 +1,92 @@
+name: Build KernelSU for OnePlus ACE5 (pineapple)
+
+on:
+  workflow_dispatch:
+    inputs:
+      KERNEL_SOURCE:
+        description: 'Kernel source repository'
+        required: true
+        default: 'https://github.com/OnePlusOSS/kernel_oneplus_sm8550'
+      KERNEL_SOURCE_BRANCH:
+        description: 'Kernel source branch'
+        required: true
+        default: 'pineapple-s'
+      KERNEL_CONFIG:
+        description: 'Kernel config'
+        required: true
+        default: 'vendor/pineapple-qgki_defconfig'
+      KERNELSU_VERSION:
+        description: 'KernelSU version or branch'
+        required: true
+        default: 'main'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential bc bison flex libssl-dev libelf-dev curl wget git zip unzip python3 python3-pip ccache
+      
+      - name: Install android build tools
+        run: |
+          sudo apt-get install -y libncurses-dev gawk lzop gcc-aarch64-linux-gnu
+      
+      - name: Set up environment
+        run: |
+          echo "WORKDIR=$(pwd)" >> $GITHUB_ENV
+          mkdir -p kernel_out
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+      
+      - name: Clone kernel source
+        run: |
+          git clone ${{ github.event.inputs.KERNEL_SOURCE }} -b ${{ github.event.inputs.KERNEL_SOURCE_BRANCH }} --depth=1 kernel
+          cd kernel
+          git status
+      
+      - name: Clone KernelSU
+        run: |
+          cd kernel
+          curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s ${{ github.event.inputs.KERNELSU_VERSION }}
+      
+      - name: Setup build config
+        run: |
+          cd kernel
+          export ARCH=arm64
+          export SUBARCH=arm64
+          export CROSS_COMPILE=aarch64-linux-gnu-
+          export PATH=/usr/lib/ccache:$PATH
+          make O=../kernel_out ${{ github.event.inputs.KERNEL_CONFIG }}
+      
+      - name: Build kernel
+        run: |
+          cd kernel
+          export ARCH=arm64
+          export SUBARCH=arm64
+          export CROSS_COMPILE=aarch64-linux-gnu-
+          export PATH=/usr/lib/ccache:$PATH
+          make O=../kernel_out -j$(nproc --all)
+      
+      - name: Create Anykernel3 package
+        run: |
+          git clone https://github.com/osm0sis/AnyKernel3
+          cd AnyKernel3
+          rm -rf .git README.md
+          
+          # Modify the AnyKernel3 config for OnePlus ACE5
+          sed -i 's/do.devicecheck=1/do.devicecheck=0/g' anykernel.sh
+          sed -i 's/device.name1=/device.name1=pineapple/g' anykernel.sh
+          
+          # Copy the compiled kernel
+          cp ../kernel_out/arch/arm64/boot/Image ./
+          
+          # Create zip package
+          zip -r9 ../KernelSU-OnePlus-ACE5-pineapple.zip *
+      
+      - name: Upload kernel zip
+        uses: actions/upload-artifact@v3
+        with:
+          name: KernelSU-OnePlus-ACE5
+          path: KernelSU-OnePlus-ACE5-pineapple.zip
