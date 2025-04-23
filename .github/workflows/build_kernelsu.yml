@@ -86,7 +86,7 @@ jobs:
           zip -r9 ../KernelSU-OnePlus-ACE5-pineapple.zip *
       
       - name: Upload kernel zip
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4  # Thay v3 thành v4 hoặc v2
         with:
           name: KernelSU-OnePlus-ACE5
           path: KernelSU-OnePlus-ACE5-pineapple.zip
