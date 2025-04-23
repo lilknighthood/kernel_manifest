@@ -6,7 +6,7 @@ on:
       KERNEL_SOURCE:
         description: 'Kernel source repository'
         required: true
-        default: 'https://github.com/OnePlusOSS/kernel_manifest/tree/oneplus/sm86500'
+        default: 'https://github.com/lilknighthood/kernel_manifest/tree/oneplus/sm8650'
       KERNEL_SOURCE_BRANCH:
         description: 'Kernel source branch'
         required: true
